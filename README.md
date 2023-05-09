@@ -1,4 +1,4 @@
-# Fractal Sound Explorer
+# Fractal ~~Sound~~ Explorer
 Explore fractals in an audio-visual sandbox
 
 Download executable on my itch.io page:
@@ -34,3 +34,4 @@ Controls
 * 6 - Duffing Map
 * 7 - Ikeda Map
 * 8 - Chirikov Map
+* 9 - Double Pendulum time before flip
