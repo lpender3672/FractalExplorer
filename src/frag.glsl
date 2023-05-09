@@ -116,6 +116,68 @@ vec3 fractal(VEC2 z, VEC2 c) {
     case 5: DO_LOOP(duffing); break;
     case 6: DO_LOOP(ikeda); break;
     case 7: DO_LOOP(chirikov); break;
+    case 8:
+
+        FLOAT t = 0.0;
+        FLOAT dt = 0.01;
+
+        FLOAT g = 9.81;
+
+        FLOAT _a = 1.0;
+        FLOAT _b = 1.0;
+        FLOAT _Ma = 1.0;
+        FLOAT _Mb = 1.0;
+        FLOAT _Mp = 1.0;
+
+        FLOAT _A = ((_Ma / 3.0) + _Mp + _Mb) * _a * _a;
+        FLOAT _B = (_Mb * _b * _b) / 3.0;
+        FLOAT _C = (_a * _b * _Mb) / 2.0;
+        FLOAT _D = ((_Ma / 2.0) + _Mp + _Mb) * g * _a;
+        FLOAT _E = (_Mb * g * _b) / 2.0;
+
+        z = name(z, c);
+        FLOAT th1 = c.y * 1.0;
+        FLOAT th2 = c.x * 1.0;
+
+        FLOAT th1d = 0;
+        FLOAT th2d = 0;
+        FLOAT th1dd = 0;
+        FLOAT th2dd = 0;
+
+        FLOAT dth = 0;
+        FLOAT cosdth = 0;
+        FLOAT sindth = 0;
+        FLOAT Ccosdth2 = 0;
+        //FLOAT k1, k2, k3, k4;
+
+        FLOAT T = iIters * dt;
+        i = 0;
+
+        while (t < T) {
+            dth = th1 - th2;
+            cosdth = cos(dth);
+            sindth = sin(dth);
+            Ccosdth2 = _C * _C * cosdth * cosdth;
+            th1dd = (-1 * _C * sindth * (_B * th2d * th2d + _C * th1d * th1d * cosdth) - _B * _D * sin(th1) + _C * _E * sin(th2) * cosdth) / (_A * _B - Ccosdth2);
+            th2dd = (_C * sindth * (_A * th1d * th1d + _C * th2d * th2d * cosdth) - _A * _E * sin(th2) + _C * _D * sin(th1) * cosdth) / (_A * _B - Ccosdth2);
+            // euler integration
+            th1d += th1dd * dt;
+            th2d += th2dd * dt;
+            th1 += th1d * dt;
+            th2 += th2d * dt;
+            // determine if bottom pendulum has flipped
+            if (abs(th2) > PI) {
+                break;
+            }
+            t += dt;
+            ++i;
+
+            sumz.x += th1d * th1dd + th2d * th2dd; \
+                sumz.y += th1d * th1d + th2d * th2d; \
+                sumz.z += th1dd * th1dd + th2dd * th2dd; \
+        }
+
+        z = VEC2(th1, th2);
   }
 
   if (i != iIters) {

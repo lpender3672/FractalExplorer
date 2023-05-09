@@ -1,6 +1,5 @@
-*.bin
-*.idb
-*.log
-*.obj
-*.pdb
-*.tlog
+cmake-build-*/
+.idea/
+out/
+.vs/
+CMakeSettings.json

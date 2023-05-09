@@ -1,6 +1,5 @@
 #define _USE_MATH_DEFINES
 #define _CRT_SECURE_NO_WARNINGS
-#include "WinAudio.h"
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
 #include <iostream>
@@ -12,19 +11,19 @@
 static const int target_fps = 60;
 static const int sample_rate = 48000;
 static const int max_freq = 4000;
-static const int window_w_init = 1280;
-static const int window_h_init = 720;
-static const int starting_fractal = 0;
-static const int max_iters = 1200;
+static const int window_w_init = 1920;
+static const int window_h_init = 1080;
+static const int starting_fractal = 8;
+static const int max_iters = 3000;
 static const double escape_radius_sq = 1000.0;
-static const char window_name[] = "Fractal Sound Explorer";
+static const char window_name[] = "Double Pendulum Fractal";
 
 //Settings
 static int window_w = window_w_init;
 static int window_h = window_h_init;
 static double cam_x = 0.0;
 static double cam_y = 0.0;
-static double cam_zoom = 100.0;
+static double cam_zoom = 200.0;
 static int cam_x_fp = 0;
 static int cam_y_fp = 0;
 static double cam_x_dest = cam_x;
@@ -112,6 +111,9 @@ void chirikov(double& x, double& y, double cx, double cy) {
   y += cy*std::sin(x);
   x += cx*y;
 }
+void doublependulum(double& x, double& y, double cx, double cy) {
+
+}
 
 //List of fractal equations
 static const Fractal all_fractals[] = {
@@ -123,155 +125,15 @@ static const Fractal all_fractals[] = {
   duffing,
   ikeda,
   chirikov,
-};
-
-//Synthesizer class to inherit Windows Audio.
-class Synth : public WinAudio {
-public:
-  bool audio_reset;
-  bool audio_pause;
-  double volume;
-  double play_x, play_y;
-  double play_cx, play_cy;
-  double play_nx, play_ny;
-  double play_px, play_py;
-
-  Synth(HWND hwnd) : WinAudio(hwnd, sample_rate) {
-    audio_reset = true;
-    audio_pause = false;
-    volume = 8000.0;
-    play_x = 0.0;
-    play_y = 0.0;
-    play_cx = 0.0;
-    play_cy = 0.0;
-    play_nx = 0.0;
-    play_ny = 0.0;
-    play_px = 0.0;
-    play_py = 0.0;
-  }
-
-  void SetPoint(double x, double y) {
-    play_nx = x;
-    play_ny = y;
-    audio_reset = true;
-    audio_pause = false;
-  }
-
-  virtual bool onGetData(Chunk& data) override {
-    //Setup the chunk info
-    data.samples = m_samples;
-    data.sampleCount = AUDIO_BUFF_SIZE;
-    memset(m_samples, 0, sizeof(m_samples));
-
-    //Check if audio needs to reset
-    if (audio_reset) {
-      m_audio_time = 0;
-      play_cx = (jx < 1e8 ? jx : play_nx);
-      play_cy = (jy < 1e8 ? jy : play_ny);
-      play_x = play_nx;
-      play_y = play_ny;
-      play_px = play_nx;
-      play_py = play_ny;
-      mean_x = play_nx;
-      mean_y = play_ny;
-      volume = 8000.0;
-      audio_reset = false;
-    }
-
-    //Check if paused
-    if (audio_pause) {
-      return true;
-    }
-
-    //Generate the tones
-    const int steps = sample_rate / max_freq;
-    for (int i = 0; i < AUDIO_BUFF_SIZE; i+=2) {
-      const int j = m_audio_time % steps;
-      if (j == 0) {
-        play_px = play_x;
-        play_py = play_y;
-        fractal(play_x, play_y, play_cx, play_cy);
-        if (play_x*play_x + play_y*play_y > escape_radius_sq) {
-          audio_pause = true;
-          return true;
-        }
-
-        if (normalized) {
-          dpx = play_px - play_cx;
-          dpy = play_py - play_cy;
-          dx = play_x - play_cx;
-          dy = play_y - play_cy;
-          if (dx != 0.0 || dy != 0.0) {
-            double dpmag = 1.0 / std::sqrt(1e-12 + dpx*dpx + dpy*dpy);
-            double dmag = 1.0 / std::sqrt(1e-12 + dx*dx + dy*dy);
-            dpx *= dpmag;
-            dpy *= dpmag;
-            dx *= dmag;
-            dy *= dmag;
-          }
-        } else {
-          //Point is relative to mean
-          dx = play_x - mean_x;
-          dy = play_y - mean_y;
-          dpx = play_px - mean_x;
-          dpy = play_py - mean_y;
-        }
-
-        //Update mean
-        mean_x = mean_x*0.99 + play_x*0.01;
-        mean_y = mean_y*0.99 + play_y*0.01;
-
-        //Don't let the volume go to infinity, clamp.
-        double m = dx*dx + dy*dy;
-        if (m > 2.0) {
-          dx *= 2.0 / m;
-          dy *= 2.0 / m;
-        }
-        m = dpx*dpx + dpy*dpy;
-        if (m > 2.0) {
-          dpx *= 2.0 / m;
-          dpy *= 2.0 / m;
-        }
-
-        //Lose volume over time unless in sustain mode
-        if (!sustain) {
-          volume *= 0.9992;
-        }
-      }
-
-      //Cosine interpolation
-      double t = double(j) / double(steps);
-      t = 0.5 - 0.5*std::cos(t * 3.14159);
-      double wx = t*dx + (1.0 - t)*dpx;
-      double wy = t*dy + (1.0 - t)*dpy;
-
-      //Save the audio to the 2 channels
-      m_samples[i]   = (int16_t)std::min(std::max(wx * volume, -32000.0), 32000.0);
-      m_samples[i+1] = (int16_t)std::min(std::max(wy * volume, -32000.0), 32000.0);
-      m_audio_time += 1;
-    }
-
-    //Return the sound clip
-    return !audio_reset;
-  }
-
-  int16_t m_samples[AUDIO_BUFF_SIZE];
-  int32_t m_audio_time;
-  double mean_x;
-  double mean_y;
-  double dx;
-  double dy;
-  double dpx;
-  double dpy;
+  doublependulum,
 };
 
 //Change the fractal
-void SetFractal(sf::Shader& shader, int type, Synth& synth) {
+void SetFractal(sf::Shader& shader, int type) {
   shader.setUniform("iType", type);
   jx = jy = 1e8;
   fractal = all_fractals[type];
   normalized = (type == 0);
-  synth.audio_pause = true;
   hide_orbit = true;
   frame = 0;
 }
@@ -355,16 +217,11 @@ int main(int argc, char *argv[]) {
   bool toggle_fullscreen = false;
   make_window(window, renderTexture, settings, is_fullscreen);
 
-  //Create audio synth
-  Synth synth(window.getSystemHandle());
-
   //Setup the shader
   shader.setUniform("iCam", sf::Vector2f((float)cam_x, (float)cam_y));
   shader.setUniform("iZoom", (float)cam_zoom);
-  SetFractal(shader, starting_fractal, synth);
+  SetFractal(shader, starting_fractal);
 
-  //Start the synth
-  synth.play();
 
   //Main Loop
   double px, py, orbit_x, orbit_y;
@@ -387,8 +244,8 @@ int main(int argc, char *argv[]) {
         if (keycode == sf::Keyboard::Escape) {
           window.close();
           break;
-        } else if (keycode >= sf::Keyboard::Num1 && keycode <= sf::Keyboard::Num8) {
-          SetFractal(shader, keycode - sf::Keyboard::Num1, synth);
+        } else if (keycode >= sf::Keyboard::Num1 && keycode <= sf::Keyboard::Num9) {
+          SetFractal(shader, keycode - sf::Keyboard::Num1);
         } else if (keycode == sf::Keyboard::F11) {
           toggle_fullscreen = true;
         } else if (keycode == sf::Keyboard::D) {
@@ -409,7 +266,6 @@ int main(int argc, char *argv[]) {
             const sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             ScreenToPt(mousePos.x, mousePos.y, jx, jy);
           }
-          synth.audio_pause = true;
           hide_orbit = true;
           frame = 0;
         } else if (keycode == sf::Keyboard::S) {
@@ -432,14 +288,12 @@ int main(int argc, char *argv[]) {
           leftPressed = true;
           hide_orbit = false;
           ScreenToPt(event.mouseButton.x, event.mouseButton.y, px, py);
-          synth.SetPoint(px, py);
           orbit_x = px;
           orbit_y = py;
         } else if (event.mouseButton.button == sf::Mouse::Middle) {
           prevDrag = sf::Vector2i(event.mouseButton.x, event.mouseButton.y);
           dragging = true;
         } else if (event.mouseButton.button == sf::Mouse::Right) {
-          synth.audio_pause = true;
           hide_orbit = true;
         }
       } else if (event.type == sf::Event::MouseButtonReleased) {
@@ -451,7 +305,6 @@ int main(int argc, char *argv[]) {
       } else if (event.type == sf::Event::MouseMoved) {
         if (leftPressed) {
           ScreenToPt(event.mouseMove.x, event.mouseMove.y, px, py);
-          synth.SetPoint(px, py);
           orbit_x = px;
           orbit_y = py;
         }
@@ -525,32 +378,6 @@ int main(int argc, char *argv[]) {
       takeScreenshot = false;
     }
 
-    //Draw the orbit
-    if (!hide_orbit) {
-      glLineWidth(1.0f);
-      glColor3f(1.0f, 0.0f, 0.0f);
-      glBegin(GL_LINE_STRIP);
-      int sx, sy;
-      double x = orbit_x;
-      double y = orbit_y;
-      PtToScreen(x, y, sx, sy);
-      glVertex2i(sx, sy);
-      double cx = (hasJulia ? jx : px);
-      double cy = (hasJulia ? jy : py);
-      for (int i = 0; i < 200; ++i) {
-        fractal(x, y, cx, cy);
-        PtToScreen(x, y, sx, sy);
-        glVertex2i(sx, sy);
-        if (x*x + y*y > escape_radius_sq) {
-          break;
-        } else if (i < max_freq / target_fps) {
-          orbit_x = x;
-          orbit_y = y;
-        }
-      }
-      glEnd();
-    }
-
     //Draw help menu
     if (showHelpMenu) {
       sf::RectangleShape dimRect(sf::Vector2f((float)window_w, (float)window_h));
@@ -578,6 +405,7 @@ int main(int argc, char *argv[]) {
         "  6 - Duffing Map\n"
         "  7 - Ikeda Map\n"
         "  8 - Chirikov Map\n"
+        "  9 - Double Pendulum Fractal\n"
       );
       helpMenu.setPosition(20.0f, 20.0f);
       window.draw(helpMenu);
@@ -604,7 +432,5 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  //Stop the synth before quitting
-  synth.stop();
   return 0;
 }
