@@ -1,17 +1,14 @@
 # Fractal ~~Sound~~ Explorer
-Explore fractals in an audio-visual sandbox
+Explore fractals in an ~~audio~~-visual sandbox
 
-Download executable on my itch.io page:
+Removed sound as this cannot be computed for the double pendulum fractal.
+This is just an enviroment for me to program and explore fractals that occur in my course
+
+Thanks to Hackerpoet who made the original project that this is forked from:
 https://codeparade.itch.io/fractal-sound-explorer
-
-YouTube video explanation:
 https://youtu.be/GiAj9WW1OfQ
 
 ![](https://img.itch.zone/aW1hZ2UvOTM1NzMzLzUzMTU0MzEucG5n/original/ay7ju0.png)
-
-Notes
----------------
-The fractals are designed to run in real time on a GPU.  If the program is going too slow, you can simply shrink the size of the window to make it run faster.  The rendering is also designed to increase the image quality over time.  So keep still for a bit before taking screenshots to get higher quality.
 
 Controls
 ---------------
