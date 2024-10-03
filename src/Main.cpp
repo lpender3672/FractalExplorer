@@ -14,7 +14,7 @@ static const int max_freq = 4000;
 static const int window_w_init = 1920;
 static const int window_h_init = 1080;
 static const int starting_fractal = 8;
-static const int max_iters = 3000;
+static const int max_iters = 200;
 static const double escape_radius_sq = 1000.0;
 static const char window_name[] = "Double Pendulum Fractal";
 
@@ -36,6 +36,7 @@ static bool hide_orbit = true;
 static double jx = 1e8;
 static double jy = 1e8;
 static int frame = 0;
+static int animation_frame = 1;
 
 //Fractal abstraction definition
 typedef void (*Fractal)(double&, double&, double, double);
@@ -230,6 +231,8 @@ int main(int argc, char *argv[]) {
   bool juliaDrag = false;
   bool takeScreenshot = false;
   bool showHelpMenu = false;
+  bool animating = false;
+
   sf::Vector2i prevDrag;
   while (window.isOpen()) {
     sf::Event event;
@@ -244,6 +247,9 @@ int main(int argc, char *argv[]) {
         if (keycode == sf::Keyboard::Escape) {
           window.close();
           break;
+        } else if (keycode == sf::Keyboard::Space && !animating) {
+          animating = true;
+          animation_frame = 1;
         } else if (keycode >= sf::Keyboard::Num1 && keycode <= sf::Keyboard::Num9) {
           SetFractal(shader, keycode - sf::Keyboard::Num1);
         } else if (keycode == sf::Keyboard::F11) {
@@ -261,7 +267,7 @@ int main(int argc, char *argv[]) {
         } else if (keycode == sf::Keyboard::J) {
           if (jx < 1e8) {
             jx = jy = 1e8;
-          } else {
+          } else if (!animating) {
             juliaDrag = true;
             const sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             ScreenToPt(mousePos.x, mousePos.y, jx, jy);
@@ -274,9 +280,9 @@ int main(int argc, char *argv[]) {
           showHelpMenu = !showHelpMenu;
         }
       } else if (event.type == sf::Event::KeyReleased) {
-        if (event.key.code == sf::Keyboard::J) {
+        if (event.key.code == sf::Keyboard::J && !animating) {
           juliaDrag = false;
-          frame = 0;
+          animation_frame = 1;
         }
       } else if (event.type == sf::Event::MouseWheelMoved) {
         cam_zoom_dest *= std::pow(1.1f, event.mouseWheel.delta);
@@ -303,6 +309,9 @@ int main(int argc, char *argv[]) {
           dragging = false;
         }
       } else if (event.type == sf::Event::MouseMoved) {
+        if (animating) {
+          continue;
+        }
         if (leftPressed) {
           ScreenToPt(event.mouseMove.x, event.mouseMove.y, px, py);
           orbit_x = px;
@@ -336,9 +345,21 @@ int main(int argc, char *argv[]) {
 
     //Create drawing flags for the shader
     const bool hasJulia = (jx < 1e8);
-    const bool drawJset = juliaDrag;
-    const bool drawMset = !juliaDrag;
+    const bool drawJset = juliaDrag || animating;
+    const bool drawMset = !drawJset;
     const int flags = (drawMset ? 0x01 : 0) | (drawJset ? 0x02 : 0) | (use_color ? 0x04 : 0);
+
+    if (animating) {
+      frame = 1;
+
+      // get mouse position
+      sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+      double sx = mousePos.x + 0.01 * window_w * std::sin(animation_frame * 2 * M_PI / 600);
+      double sy = mousePos.y + 0.01 * window_h * std::cos(animation_frame * 2 * M_PI / 600);
+
+      jx = double(sx - window_w / 2) / cam_zoom - cam_x;
+      jy = double(sy - window_h / 2) / cam_zoom - cam_y;
+    }
 
     //Set the shader parameters
     const sf::Glsl::Vec2 window_res((float)window_w, (float)window_h);
@@ -413,6 +434,14 @@ int main(int argc, char *argv[]) {
 
     //Flip the screen buffer
     window.display();
+
+    if (animating) {
+      animation_frame += 1;
+    }
+    if (animation_frame > 600) {
+      animating = false;
+      animation_frame = 1;
+    }
 
     //Update shader time if frame blending is needed
     const double xSpeed = std::abs(cam_x - cam_x_dest) * cam_zoom_dest;

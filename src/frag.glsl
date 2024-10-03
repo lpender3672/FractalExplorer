@@ -139,8 +139,8 @@ vec3 fractal(VEC2 z, VEC2 c) {
         FLOAT th1 = c.y * 1.0;
         FLOAT th2 = c.x * 1.0;
 
-        FLOAT th1d = 0;
-        FLOAT th2d = 0;
+        FLOAT th1d = c.y - z.y;
+        FLOAT th2d = c.x - z.x;
         FLOAT th1dd = 0;
         FLOAT th2dd = 0;
 

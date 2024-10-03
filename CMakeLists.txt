@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_PREFIX_PATH "C:/Git/SFML-2.5.1")
+set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../SFML-2.5.1")
 
 set(FRAG_SHADER_FILE "${CMAKE_SOURCE_DIR}/src/frag.glsl")
 set(VERT_SHADER_FILE "${CMAKE_SOURCE_DIR}/src/vert.glsl")
