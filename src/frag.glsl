@@ -1,7 +1,7 @@
 #version 400 compatibility
 #extension GL_ARB_gpu_shader_fp64 : enable
-#pragma optionNV(fastmath off)
-#pragma optionNV(fastprecision off)
+#pragma optionNV(fastmath on)
+#pragma optionNV(fastprecision on)
 
 #define FLOAT float
 #define VEC2 vec2
@@ -135,7 +135,7 @@ vec3 fractal(VEC2 z, VEC2 c) {
         FLOAT _D = ((_Ma / 2.0) + _Mp + _Mb) * g * _a;
         FLOAT _E = (_Mb * g * _b) / 2.0;
 
-        z = name(z, c);
+        //z = name(z, c);
         FLOAT th1 = c.y * 1.0;
         FLOAT th2 = c.x * 1.0;
 

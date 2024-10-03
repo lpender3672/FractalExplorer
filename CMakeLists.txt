@@ -1,10 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
 project(fractals VERSION 1.0.0 LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
 # Default to release builds
 if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Release)
 endif()
+
+set(CMAKE_PREFIX_PATH "C:/Git/SFML-2.5.1")
+
+set(FRAG_SHADER_FILE "${CMAKE_SOURCE_DIR}/src/frag.glsl")
+set(VERT_SHADER_FILE "${CMAKE_SOURCE_DIR}/src/vert.glsl")
 
 find_package(SFML 2 REQUIRED COMPONENTS graphics system window)
 find_package(Threads REQUIRED)
@@ -21,8 +29,6 @@ if (UNIX)
    target_link_libraries(${PROJECT_NAME} pthread)
 endif (UNIX)
 
-# Copy res dir to the binary directory
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 if(MSVC)
    foreach(lib ${SFML_LIBS})
