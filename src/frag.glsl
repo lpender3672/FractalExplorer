@@ -218,5 +218,9 @@ void main() {
   if (FLAG_DRAW_MSET && FLAG_DRAW_JSET) {
     col *= 0.5;
   }
-  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0 / (iTime + 1.0));
+  col = clamp(col, 0.0, 1.0);
+  col.x = col.x;
+  col.y = 0.9 * col.y;
+  col.z = 0.9 * col.z;
+  gl_FragColor = vec4(col, 1.0 / (iTime + 1.0));
 }
