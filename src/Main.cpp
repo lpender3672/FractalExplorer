@@ -14,7 +14,7 @@ static const int max_freq = 4000;
 static const int window_w_init = 1920;
 static const int window_h_init = 1080;
 static const int starting_fractal = 8;
-static const int max_iters = 200;
+static const int max_iters = 1000;
 static const double escape_radius_sq = 1000.0;
 static const char window_name[] = "Double Pendulum Fractal";
 
@@ -37,6 +37,9 @@ static double jx = 1e8;
 static double jy = 1e8;
 static int frame = 0;
 static int animation_frame = 1;
+static int slices = 1;
+static double offset_x = 0.0;
+static double offset_y = 0.0;
 
 //Fractal abstraction definition
 typedef void (*Fractal)(double&, double&, double, double);
@@ -232,6 +235,7 @@ int main(int argc, char *argv[]) {
   bool takeScreenshot = false;
   bool showHelpMenu = false;
   bool animating = false;
+  bool kaleidoscoping = false;
 
   sf::Vector2i prevDrag;
   while (window.isOpen()) {
@@ -274,14 +278,29 @@ int main(int argc, char *argv[]) {
           }
           hide_orbit = true;
           frame = 0;
+        } else if (keycode == sf::Keyboard::K) {
+          if (!kaleidoscoping) {
+            kaleidoscoping = true;
+            const sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            ScreenToPt(mousePos.x, mousePos.y, offset_x, offset_y);
+          }
+          hide_orbit = true;
+          frame = 0;
         } else if (keycode == sf::Keyboard::S) {
           takeScreenshot = true;
         } else if (keycode == sf::Keyboard::H) {
           showHelpMenu = !showHelpMenu;
+        } else if (keycode == sf::Keyboard::Up) {
+          slices += 1;
+        } else if (keycode == sf::Keyboard::Down) {
+          slices = std::max(0, slices - 1);
         }
       } else if (event.type == sf::Event::KeyReleased) {
         if (event.key.code == sf::Keyboard::J && !animating) {
           juliaDrag = false;
+          animation_frame = 1;
+        } else if (event.key.code == sf::Keyboard::K && !animating) {
+          kaleidoscoping = false;
           animation_frame = 1;
         }
       } else if (event.type == sf::Event::MouseWheelMoved) {
@@ -328,6 +347,10 @@ int main(int argc, char *argv[]) {
           ScreenToPt(event.mouseMove.x, event.mouseMove.y, jx, jy);
           frame = 1;
         }
+        if (kaleidoscoping) {
+          ScreenToPt(event.mouseMove.x, event.mouseMove.y, offset_x, offset_y);
+          frame = 1;
+        }
       }
     }
 
@@ -370,6 +393,9 @@ int main(int argc, char *argv[]) {
     shader.setUniform("iJulia", sf::Vector2f((float)jx, (float)jy));
     shader.setUniform("iIters", max_iters);
     shader.setUniform("iTime", frame);
+    shader.setUniform("iSlices", slices);
+    shader.setUniform("iOffset", sf::Vector2f((float)offset_x, (float)offset_y));
+    shader.setUniform("iKaleidoscoping", kaleidoscoping);
 
     //Draw the full-screen shader to the render texture
     sf::RenderStates states = sf::RenderStates::Default;

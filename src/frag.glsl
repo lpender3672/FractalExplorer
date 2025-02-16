@@ -1,14 +1,15 @@
 #version 400 compatibility
 #extension GL_ARB_gpu_shader_fp64 : enable
 #pragma optionNV(fastmath on)
-#pragma optionNV(fastprecision on)
+#pragma optionNV(fastprecision off) // broken with new nvidia drivers?
 
 #define FLOAT float
 #define VEC2 vec2
 #define VEC3 vec3
-#define AA_LEVEL 1
+#define AA_LEVEL 4
 #define ESCAPE 1000.0
 #define PI 3.141592653
+#define RECURSIVE_DEPTH 3
 
 #define FLAG_DRAW_MSET ((iFlags & 0x01) == 0x01)
 #define FLAG_DRAW_JSET ((iFlags & 0x02) == 0x02)
@@ -22,6 +23,9 @@ uniform int iType;
 uniform int iIters;
 uniform int iFlags;
 uniform int iTime;
+uniform int iSlices;
+uniform vec2 iOffset;
+uniform int iKaleidoscoping;
 
 #define cx_one VEC2(1.0, 0.0)
 VEC2 cx_mul(VEC2 a, VEC2 b) {
@@ -201,16 +205,36 @@ void main() {
 	//Get normalized screen coordinate
 	vec2 screen_pos = gl_FragCoord.xy - (iResolution.xy * 0.5);
 
+  VEC2 c_k;
+  VEC2 tileSize = VEC2(2, 2);
+
   vec3 col = vec3(0.0, 0.0, 0.0);
   for (int i = 0; i < AA_LEVEL; ++i) {
     vec2 dxy = vec2(rand(i*0.54321 + iTime), rand(i*0.12345 + iTime));
     VEC2 c = VEC2((screen_pos + dxy) * vec2(1.0, -1.0) / iZoom - iCam);
 
+
+    if (iSlices == 0) {
+      c_k = c;
+    } else {
+      float r = length(c + iOffset);
+      float theta = atan(c.y + iOffset.y, c.x + iOffset.x);
+      float angleStep = 2.0 * 3.141592 / float(iSlices);
+      theta = mod(theta, angleStep);  
+      theta = abs(theta - angleStep / 2.0);
+
+      c_k = vec2(cos(theta), sin(theta)) * r;
+    }
+    if (iKaleidoscoping == 1) {
+      c_k.x = abs(mod(c_k.x , tileSize.x) - 0.5 * tileSize.x);
+      c_k.y = abs(mod(c_k.y , tileSize.y) - 0.5 * tileSize.y);
+    }
+
     if (FLAG_DRAW_MSET) {
-      col += fractal(c, c);
+      col += fractal(c_k, c_k);
     }
     if (FLAG_DRAW_JSET) {
-      col += fractal(c, iJulia);
+      col += fractal(c_k, iJulia);
     }
   }
 
